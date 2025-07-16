@@ -1327,7 +1327,6 @@ static int do_client2(int ss, const char* hostport, int local)
   int msg_size;
   int64_t* results;
   int i, one = 1;
-  uint64_t old_tsc_hz;
 
   client_check_ver(ss);
 
@@ -1401,9 +1400,7 @@ static int do_client2(int ss, const char* hostport, int local)
   results = malloc(cfg_maxiter * sizeof(*results));
   NT_TEST(results != NULL);
 
-  /* Very rough calibration so we've got enough data for the warmup and sys
-   * info. We re-sample more accurately again after that */
-  NT_TRY(sfnt_tsc_get_params_end(&tsc_measure, &tsc, 100));
+  NT_TRY(sfnt_tsc_get_params_end(&tsc_measure, &tsc, 50000));
   sfnt_dump_sys_info(&tsc);
   if( server_ld_preload != NULL )
     printf("# server LD_PRELOAD=%s\n", server_ld_preload);
@@ -1436,10 +1433,6 @@ static int do_client2(int ss, const char* hostport, int local)
   }
 
   do_warmup(ss, read_fd, write_fd);
-  old_tsc_hz = tsc.hz;
-  NT_TRY(sfnt_tsc_get_params_end(&tsc_measure, &tsc, 50000));
-  if( fabs((double)(int64_t)(tsc.hz - old_tsc_hz) / old_tsc_hz) > .01 )
-    printf("# WARNING: tsc_hz changed to %"PRIu64" on recheck\n", tsc.hz);
   for( i = 0; i < msg_sizes.len; ++i )
     do_test(ss, read_fd, write_fd, msg_sizes.list[i], results);
 
